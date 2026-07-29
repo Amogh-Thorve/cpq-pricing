@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cpq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cpq_user
+      POSTGRES_PASSWORD: cpq_password
+      POSTGRES_DB: cpq_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - cpq_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cpq_user -d cpq_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cpq_postgres_data:
+    driver: local

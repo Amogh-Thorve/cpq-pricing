@@ -1,0 +1,46 @@
+# ============================================================
+# CPQ Platform - Git Ignore
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Environment secrets
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Database
+*.sqlite3
+*.db
+
+# Alembic compiled artefacts
+backend/alembic/versions/*.pyc
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# Static generated files
+backend/static/documents/
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
