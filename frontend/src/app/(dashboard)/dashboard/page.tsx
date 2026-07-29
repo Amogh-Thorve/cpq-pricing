@@ -46,26 +46,26 @@ export default function DashboardHome() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Quotation Revenue"
-          value="$1,248,500"
-          subtext="+14.2% from last month"
+          value="$0"
+          subtext="No data for this month"
           icon={<TrendingUp size={20} />}
         />
         <MetricCard
           title="Active Quotes Pipeline"
-          value="42"
-          subtext="12 require approval routing"
+          value="0"
+          subtext="No active quotes"
           icon={<Clock size={20} />}
         />
         <MetricCard
           title="Salesforce Sync Status"
-          value="Connected"
-          subtext="Last synced 5 mins ago"
+          value="Not Connected"
+          subtext="Integration offline"
           icon={<FileSpreadsheet size={20} />}
         />
         <MetricCard
           title="Pending Approvals"
-          value="4"
-          subtext="Requires Sales Manager sign-off"
+          value="0"
+          subtext="No pending requests"
           icon={<AlertTriangle size={20} />}
         />
       </div>
@@ -77,9 +77,9 @@ export default function DashboardHome() {
             <Sparkles size={16} />
             <span>AI-Assisted Workflow Suggestion</span>
           </div>
-          <h2 className="text-xl font-bold text-zinc-100">Draft an updated proposal for Customer ACME Inc.</h2>
+          <h2 className="text-xl font-bold text-zinc-100">No active suggestions</h2>
           <p className="text-sm text-zinc-400 max-w-xl">
-            Our pricing engine has detected a volume discount mismatch on standard SLAs. The Gemini Copilot can help you revise line rates automatically.
+            Gemini Copilot is ready to analyze your pipeline and suggest actions as soon as new quotes or customers are registered in the workspace.
           </p>
         </div>
         <Link 

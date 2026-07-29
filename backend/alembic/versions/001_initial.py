@@ -21,17 +21,12 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     op.create_table(
         "users",
-        sa.Column("id", sa.Integer(), primary_key=True, index=True),
+        sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column("email", sa.String(255), nullable=False, unique=True, index=True),
         sa.Column("hashed_password", sa.String(255), nullable=False),
-        sa.Column("full_name", sa.String(255), nullable=False),
+        sa.Column("first_name", sa.String(100), nullable=False),
+        sa.Column("last_name", sa.String(100), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column(
-            "role",
-            sa.Enum("admin", "sales_rep", "manager", "executive", name="userrole"),
-            nullable=False,
-            server_default="sales_rep",
-        ),
     )
 
     # ------------------------------------------------------------------
@@ -44,7 +39,7 @@ def upgrade() -> None:
         sa.Column("industry", sa.String(100), nullable=True),
         sa.Column("website", sa.String(255), nullable=True),
         sa.Column("external_crm_id", sa.String(100), nullable=True, unique=True, index=True),
-        sa.Column("account_manager_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("account_manager_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=True),
     )
 
     # ------------------------------------------------------------------
@@ -164,7 +159,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("customer_id", sa.Integer(), sa.ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("created_by_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("created_by_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("price_book_id", sa.Integer(), sa.ForeignKey("price_books.id"), nullable=True),
         sa.Column("external_opportunity_id", sa.String(100), nullable=True),
         sa.Column("external_crm_id", sa.String(100), nullable=True),
@@ -196,7 +191,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(50), nullable=False, server_default="pending"),
         sa.Column("comments", sa.String(500), nullable=True),
         sa.Column("assigned_role", sa.String(50), nullable=False),
-        sa.Column("decided_by_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("decided_by_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("decided_at", sa.DateTime(), nullable=True),
     )
@@ -210,7 +205,7 @@ def upgrade() -> None:
         sa.Column("quote_id", sa.Integer(), sa.ForeignKey("quotes.id", ondelete="CASCADE"), nullable=False),
         sa.Column("file_path", sa.String(500), nullable=False),
         sa.Column("generated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("created_by_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("created_by_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
     )
 
     # ------------------------------------------------------------------

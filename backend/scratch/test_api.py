@@ -8,7 +8,7 @@ def run_tests():
     
     # 1. Clean test user (will try register, ignore if duplicate error or handle it)
     email = "john@company.com"
-    pwd = "password123"
+    pwd = "Password123!"
     full_name = "John Sales Rep"
     role = "sales_rep"
     

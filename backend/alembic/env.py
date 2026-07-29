@@ -10,7 +10,7 @@ from backend.app.core.database import Base
 from backend.app.core.config import settings
 
 # 2. Import all domain models so they register on Base.metadata
-from backend.app.domains.auth.models import User
+from backend.app.domains.auth.models import User, Role, Permission, UserRole, RolePermission, AuthenticationSession, RefreshToken, PasswordResetToken, EmailVerificationToken
 from backend.app.domains.customer.models import Customer, Contact
 from backend.app.domains.catalog.models import Category, Product, PriceBook, PriceBookEntry
 from backend.app.domains.pricing.models import PricingRule

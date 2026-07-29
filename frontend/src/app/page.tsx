@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { ShieldCheck, Sparkles, ArrowRight, LayoutDashboard, Lock } from "lucide-react";
+import { ShieldCheck, Sparkles, Lock } from "lucide-react";
 
 export default function Home() {
   return (
@@ -40,15 +40,6 @@ export default function Home() {
 
         {/* Portals to features */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-          <Link 
-            href="/dashboard"
-            className="flex items-center justify-center gap-2 bg-teal-500 text-zinc-950 px-6 py-3.5 rounded-xl font-bold text-sm hover:bg-teal-400 transition-all duration-200 shadow-lg shadow-teal-500/10"
-          >
-            <LayoutDashboard size={18} />
-            <span>Access Platform Dashboard</span>
-            <ArrowRight size={16} />
-          </Link>
-
           <Link 
             href="/auth/login"
             className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 px-6 py-3.5 rounded-xl font-bold text-sm text-zinc-300 transition-all duration-200"
