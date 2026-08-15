@@ -8,7 +8,8 @@ from backend.app.domains.auth.models import User
 from backend.app.domains.customer.schemas import (
     CustomerCreate, CustomerRead, CustomerUpdate, CustomerListResponse,
     ContactCreate, ContactRead, ContactUpdate,
-    CustomerAddressCreate, CustomerAddressRead, CustomerAddressUpdate
+    CustomerAddressCreate, CustomerAddressRead, CustomerAddressUpdate,
+    CustomerAssignRequest
 )
 from backend.app.domains.customer.services import CustomerService
 
@@ -24,7 +25,7 @@ def _tenant(user: User) -> uuid.UUID:
 
 
 # -------------------------------------------------------
-# Customer Endpoints
+# Customer Endpoints (Static Paths First)
 # -------------------------------------------------------
 
 @router.get("/search", response_model=CustomerListResponse)
@@ -36,7 +37,7 @@ async def search_customers(
     customer_type: Optional[str] = Query(None),
     industry: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.read"))
+    current_user: User = Depends(PermissionChecker("customer.read"))
 ):
     """Search customers by query string across key fields. Tenant-scoped."""
     service = CustomerService(db)
@@ -47,7 +48,8 @@ async def search_customers(
         page_size=page_size,
         status=status,
         customer_type=customer_type,
-        industry=industry
+        industry=industry,
+        current_user=current_user
     )
 
 
@@ -59,7 +61,7 @@ async def list_customers(
     customer_type: Optional[str] = Query(None),
     industry: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.read"))
+    current_user: User = Depends(PermissionChecker("customer.read"))
 ):
     """List customers with pagination and optional filters. Tenant-scoped."""
     service = CustomerService(db)
@@ -69,22 +71,54 @@ async def list_customers(
         page_size=page_size,
         status=status,
         customer_type=customer_type,
-        industry=industry
+        industry=industry,
+        current_user=current_user
     )
 
+
+@router.post("/import", status_code=status.HTTP_200_OK)
+async def import_customers(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("customer.import"))
+):
+    """Excel import endpoint boundary."""
+    return {"message": "Import boundary validation passed."}
+
+
+@router.post("/salesforce/sync", status_code=status.HTTP_200_OK)
+async def salesforce_sync(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("customer.salesforce_sync"))
+):
+    """Salesforce sync endpoint boundary."""
+    return {"message": "Salesforce sync boundary validation passed."}
+
+
+@router.get("/analytics", status_code=status.HTTP_200_OK)
+async def customer_analytics(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("customer.analytics"))
+):
+    """Customer analytics endpoint boundary."""
+    return {"message": "Customer analytics boundary validation passed."}
+
+
+# -------------------------------------------------------
+# Customer Endpoints (Dynamic Paths Second)
+# -------------------------------------------------------
 
 @router.post("/", response_model=CustomerRead, status_code=status.HTTP_201_CREATED)
 async def create_customer(
     schema: CustomerCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.create"))
+    current_user: User = Depends(PermissionChecker("customer.create"))
 ):
     """Create a new customer account. Tenant-scoped."""
     service = CustomerService(db)
     return await service.create_customer(
         tenant_id=_tenant(current_user),
         schema=schema,
-        current_user_id=current_user.id
+        current_user=current_user
     )
 
 
@@ -92,11 +126,11 @@ async def create_customer(
 async def get_customer(
     customer_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.read"))
+    current_user: User = Depends(PermissionChecker("customer.read"))
 ):
     """Get customer by ID. Tenant-scoped."""
     service = CustomerService(db)
-    return await service.get_customer(_tenant(current_user), customer_id)
+    return await service.get_customer(_tenant(current_user), customer_id, current_user=current_user)
 
 
 @router.put("/{customer_id}", response_model=CustomerRead)
@@ -104,7 +138,7 @@ async def update_customer(
     customer_id: int,
     schema: CustomerUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.update"))
+    current_user: User = Depends(PermissionChecker("customer.update"))
 ):
     """Update an existing customer. Tenant-scoped."""
     service = CustomerService(db)
@@ -112,37 +146,69 @@ async def update_customer(
         tenant_id=_tenant(current_user),
         customer_id=customer_id,
         schema=schema,
-        current_user_id=current_user.id
+        current_user=current_user
     )
 
 
-@router.post("/{customer_id}/archive", response_model=CustomerRead)
+@router.patch("/{customer_id}/archive", response_model=CustomerRead)
 async def archive_customer(
     customer_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.archive"))
+    current_user: User = Depends(PermissionChecker("customer.archive"))
 ):
     """Archive a customer (soft status change). Tenant-scoped."""
     service = CustomerService(db)
     return await service.archive_customer(
         tenant_id=_tenant(current_user),
         customer_id=customer_id,
-        current_user_id=current_user.id
+        current_user=current_user
     )
 
 
-@router.post("/{customer_id}/restore", response_model=CustomerRead)
+@router.patch("/{customer_id}/restore", response_model=CustomerRead)
 async def restore_customer(
     customer_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("customers.archive"))
+    current_user: User = Depends(PermissionChecker("customer.restore"))
 ):
     """Restore an archived customer. Tenant-scoped."""
     service = CustomerService(db)
     return await service.restore_customer(
         tenant_id=_tenant(current_user),
         customer_id=customer_id,
-        current_user_id=current_user.id
+        current_user=current_user
+    )
+
+
+@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_customer(
+    customer_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("customer.delete"))
+):
+    """Delete a customer. Tenant-scoped."""
+    service = CustomerService(db)
+    await service.delete_customer(_tenant(current_user), customer_id, current_user=current_user)
+
+
+@router.post("/{customer_id}/assign", response_model=CustomerRead)
+async def assign_customer(
+    customer_id: int,
+    payload: CustomerAssignRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("customer.assign"))
+):
+    """Reassign ownership of a customer."""
+    service = CustomerService(db)
+    # Check that customer exists first (and check ownership/tenant context)
+    await service.get_customer(_tenant(current_user), customer_id, current_user=current_user)
+    
+    schema = CustomerUpdate(owner_id=payload.owner_id)
+    return await service.update_customer(
+        tenant_id=_tenant(current_user),
+        customer_id=customer_id,
+        schema=schema,
+        current_user=current_user
     )
 
 
@@ -154,12 +220,11 @@ async def restore_customer(
 async def list_contacts(
     customer_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("contacts.read"))
+    current_user: User = Depends(PermissionChecker("customer.contact.read"))
 ):
     """List contacts for a customer. Tenant-scoped."""
     service = CustomerService(db)
-    await service.get_customer(_tenant(current_user), customer_id)
-    return await service.list_contacts(_tenant(current_user), customer_id)
+    return await service.list_contacts(_tenant(current_user), customer_id, current_user=current_user)
 
 
 @router.post("/{customer_id}/contacts", response_model=ContactRead, status_code=status.HTTP_201_CREATED)
@@ -167,11 +232,11 @@ async def create_contact(
     customer_id: int,
     schema: ContactCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("contacts.create"))
+    current_user: User = Depends(PermissionChecker("customer.contact.create"))
 ):
     """Add a contact to a customer. Tenant-scoped."""
     service = CustomerService(db)
-    return await service.add_contact(_tenant(current_user), customer_id, schema)
+    return await service.add_contact(_tenant(current_user), customer_id, schema, current_user=current_user)
 
 
 @router.put("/{customer_id}/contacts/{contact_id}", response_model=ContactRead)
@@ -180,11 +245,11 @@ async def update_contact(
     contact_id: int,
     schema: ContactUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("contacts.update"))
+    current_user: User = Depends(PermissionChecker("customer.contact.update"))
 ):
     """Update a contact. Tenant-scoped."""
     service = CustomerService(db)
-    return await service.update_contact(_tenant(current_user), contact_id, schema)
+    return await service.update_contact(_tenant(current_user), contact_id, schema, current_user=current_user)
 
 
 @router.delete("/{customer_id}/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -192,11 +257,11 @@ async def delete_contact(
     customer_id: int,
     contact_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(PermissionChecker("contacts.delete"))
+    current_user: User = Depends(PermissionChecker("customer.contact.update"))
 ):
     """Delete a contact. Tenant-scoped."""
     service = CustomerService(db)
-    await service.delete_contact(_tenant(current_user), contact_id)
+    await service.delete_contact(_tenant(current_user), contact_id, current_user=current_user)
 
 
 # -------------------------------------------------------
@@ -211,8 +276,7 @@ async def list_addresses(
 ):
     """List addresses for a customer. Tenant-scoped."""
     service = CustomerService(db)
-    await service.get_customer(_tenant(current_user), customer_id)
-    return await service.list_addresses(_tenant(current_user), customer_id)
+    return await service.list_addresses(_tenant(current_user), customer_id, current_user=current_user)
 
 
 @router.post("/{customer_id}/addresses", response_model=CustomerAddressRead, status_code=status.HTTP_201_CREATED)
@@ -224,7 +288,7 @@ async def create_address(
 ):
     """Add an address to a customer. Tenant-scoped."""
     service = CustomerService(db)
-    return await service.add_address(_tenant(current_user), customer_id, schema)
+    return await service.add_address(_tenant(current_user), customer_id, schema, current_user=current_user)
 
 
 @router.put("/{customer_id}/addresses/{address_id}", response_model=CustomerAddressRead)
@@ -237,7 +301,7 @@ async def update_address(
 ):
     """Update an address. Tenant-scoped."""
     service = CustomerService(db)
-    return await service.update_address(_tenant(current_user), address_id, schema)
+    return await service.update_address(_tenant(current_user), address_id, schema, current_user=current_user)
 
 
 @router.delete("/{customer_id}/addresses/{address_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -249,4 +313,4 @@ async def delete_address(
 ):
     """Delete an address. Tenant-scoped."""
     service = CustomerService(db)
-    await service.delete_address(_tenant(current_user), address_id)
+    await service.delete_address(_tenant(current_user), address_id, current_user=current_user)

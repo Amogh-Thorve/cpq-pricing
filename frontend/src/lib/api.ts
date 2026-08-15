@@ -35,7 +35,7 @@ async function request<T>(
   const token = tokenStorage.get();
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(!(options.body instanceof FormData) && { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -64,7 +64,7 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
-// ─── HTTP method helpers ──────────────────────────────────────────────────────
+// ─── API Methods ──────────────────────────────────────────────────────────────
 
 export const api = {
   get: <T>(path: string) =>
@@ -75,6 +75,12 @@ export const api = {
 
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+
+  upload: <T>(path: string, body: FormData) =>
+    request<T>(path, { method: "POST", body }),
 
   delete: <T>(path: string) =>
     request<T>(path, { method: "DELETE" }),

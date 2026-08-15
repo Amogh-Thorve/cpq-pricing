@@ -13,50 +13,54 @@ from backend.app.domains.customer.schemas import (
 
 
 class CustomerRepository:
-    """Persistence layer for Customer accounts, isolated strictly by tenant_id."""
+    """Persistence layer for Customer accounts, isolated optionally by tenant_id."""
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, tenant_id: uuid.UUID, customer_id: int) -> Optional[Customer]:
-        """Retrieve a Customer by PK, tenant-scoped, with contacts+addresses."""
+    async def get_by_id(self, tenant_id: Optional[uuid.UUID], customer_id: int) -> Optional[Customer]:
+        """Retrieve a Customer by PK, optionally tenant-scoped, with contacts+addresses."""
+        query = select(Customer).where(Customer.id == customer_id)
+        if tenant_id:
+            query = query.where(Customer.tenant_id == tenant_id)
         result = await self.db.execute(
-            select(Customer)
-            .where(Customer.tenant_id == tenant_id, Customer.id == customer_id)
-            .options(
+            query.options(
                 selectinload(Customer.contacts),
                 selectinload(Customer.addresses)
             )
         )
         return result.scalars().first()
 
-    async def get_by_customer_number(self, tenant_id: uuid.UUID, customer_number: str) -> Optional[Customer]:
+    async def get_by_customer_number(self, tenant_id: Optional[uuid.UUID], customer_number: str) -> Optional[Customer]:
         """Retrieve a Customer by customer_number within the tenant."""
-        result = await self.db.execute(
-            select(Customer)
-            .where(Customer.tenant_id == tenant_id, Customer.customer_number == customer_number)
-        )
+        query = select(Customer).where(Customer.customer_number == customer_number)
+        if tenant_id:
+            query = query.where(Customer.tenant_id == tenant_id)
+        result = await self.db.execute(query)
         return result.scalars().first()
 
     async def list_and_count(
         self,
-        tenant_id: uuid.UUID,
+        tenant_id: Optional[uuid.UUID],
         page: int = 1,
         page_size: int = 20,
         status: Optional[str] = None,
         customer_type: Optional[str] = None,
         industry: Optional[str] = None,
-        q: Optional[str] = None
+        q: Optional[str] = None,
+        owner_id: Optional[uuid.UUID] = None
     ) -> Tuple[List[Customer], int]:
         """
         Paginated list with optional filters and search. All filtering is
         done at DB level — no full-table loads.
         Returns (items, total_count).
         """
-        base_query = (
-            select(Customer)
-            .where(Customer.tenant_id == tenant_id)
-        )
+        base_query = select(Customer)
+        if tenant_id:
+            base_query = base_query.where(Customer.tenant_id == tenant_id)
+
+        if owner_id:
+            base_query = base_query.where(Customer.owner_id == owner_id)
 
         # Optional filters
         if status:
@@ -113,6 +117,8 @@ class CustomerRepository:
             updated_by=created_by,
             **schema.model_dump()
         )
+        db_customer.contacts = []
+        db_customer.addresses = []
         self.db.add(db_customer)
         await self.db.flush()
         return db_customer
@@ -132,9 +138,9 @@ class CustomerRepository:
         await self.db.flush()
         return db_customer
 
-    async def delete(self, tenant_id: uuid.UUID, db_customer: Customer) -> None:
+    async def delete(self, tenant_id: Optional[uuid.UUID], db_customer: Customer) -> None:
         """Hard-delete customer (cascades to contacts and addresses)."""
-        if db_customer.tenant_id == tenant_id:
+        if not tenant_id or db_customer.tenant_id == tenant_id:
             await self.db.delete(db_customer)
             await self.db.flush()
 
@@ -145,85 +151,79 @@ class ContactRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, tenant_id: uuid.UUID, contact_id: int) -> Optional[Contact]:
+    async def get_by_id(self, tenant_id: Optional[uuid.UUID], contact_id: int) -> Optional[Contact]:
         """Retrieve a Contact by id — join ensures tenant ownership."""
-        result = await self.db.execute(
-            select(Contact)
-            .join(Customer)
-            .where(Customer.tenant_id == tenant_id, Contact.id == contact_id)
-        )
+        query = select(Contact).join(Customer).where(Contact.id == contact_id)
+        if tenant_id:
+            query = query.where(Customer.tenant_id == tenant_id)
+        result = await self.db.execute(query)
         return result.scalars().first()
 
-    async def list_by_customer(self, tenant_id: uuid.UUID, customer_id: int) -> List[Contact]:
-        """List contacts for a customer, tenant-scoped via JOIN."""
-        result = await self.db.execute(
-            select(Contact)
-            .join(Customer)
-            .where(Customer.tenant_id == tenant_id, Contact.customer_id == customer_id)
-        )
+    async def list_by_customer(self, tenant_id: Optional[uuid.UUID], customer_id: int) -> List[Contact]:
+        """List all contacts registered under a customer."""
+        query = select(Contact).join(Customer).where(Contact.customer_id == customer_id)
+        if tenant_id:
+            query = query.where(Customer.tenant_id == tenant_id)
+        result = await self.db.execute(query.order_by(Contact.id))
         return list(result.scalars().all())
 
     async def create(self, tenant_id: uuid.UUID, customer_id: int, schema: ContactCreate) -> Contact:
-        """Create a new contact linked to a customer."""
-        db_contact = Contact(customer_id=customer_id, **schema.model_dump())
-        self.db.add(db_contact)
+        contact = Contact(customer_id=customer_id, **schema.model_dump())
+        self.db.add(contact)
         await self.db.flush()
-        return db_contact
+        return contact
 
-    async def update(self, tenant_id: uuid.UUID, db_contact: Contact, schema: ContactUpdate) -> Contact:
-        """Update an existing contact."""
+    async def update(self, tenant_id: uuid.UUID, contact: Contact, schema: ContactUpdate) -> Contact:
         for field, value in schema.model_dump(exclude_unset=True).items():
-            setattr(db_contact, field, value)
-        self.db.add(db_contact)
+            setattr(contact, field, value)
+        self.db.add(contact)
         await self.db.flush()
-        return db_contact
+        return contact
 
-    async def delete(self, tenant_id: uuid.UUID, db_contact: Contact) -> None:
-        """Remove a contact."""
-        await self.db.delete(db_contact)
+    async def delete(self, tenant_id: uuid.UUID, contact: Contact) -> None:
+        await self.db.delete(contact)
         await self.db.flush()
 
 
 class CustomerAddressRepository:
-    """Persistence layer for CustomerAddress entities, validated via parent Customer's tenant_id."""
+    """Persistence layer for Address entities, validated via parent Customer's tenant_id."""
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, tenant_id: uuid.UUID, address_id: int) -> Optional[CustomerAddress]:
-        """Retrieve an address by id — join ensures tenant ownership."""
-        result = await self.db.execute(
-            select(CustomerAddress)
-            .join(Customer)
-            .where(Customer.tenant_id == tenant_id, CustomerAddress.id == address_id)
-        )
+    async def get_by_id(self, tenant_id: Optional[uuid.UUID], address_id: int) -> Optional[CustomerAddress]:
+        """Retrieve an Address by id."""
+        query = select(CustomerAddress).join(Customer).where(CustomerAddress.id == address_id)
+        if tenant_id:
+            query = query.where(Customer.tenant_id == tenant_id)
+        result = await self.db.execute(query)
         return result.scalars().first()
 
-    async def list_by_customer(self, tenant_id: uuid.UUID, customer_id: int) -> List[CustomerAddress]:
-        """List addresses for a customer, tenant-scoped via JOIN."""
-        result = await self.db.execute(
-            select(CustomerAddress)
-            .join(Customer)
-            .where(Customer.tenant_id == tenant_id, CustomerAddress.customer_id == customer_id)
-        )
+    async def list_by_customer(self, tenant_id: Optional[uuid.UUID], customer_id: int) -> List[CustomerAddress]:
+        """List all addresses registered under a customer."""
+        query = select(CustomerAddress).join(Customer).where(CustomerAddress.customer_id == customer_id)
+        if tenant_id:
+            query = query.where(Customer.tenant_id == tenant_id)
+        result = await self.db.execute(query.order_by(CustomerAddress.id))
         return list(result.scalars().all())
 
-    async def create(self, tenant_id: uuid.UUID, customer_id: int, schema: CustomerAddressCreate) -> CustomerAddress:
-        """Create a new address linked to a customer."""
-        db_address = CustomerAddress(customer_id=customer_id, **schema.model_dump())
-        self.db.add(db_address)
+    async def create(
+        self, tenant_id: uuid.UUID, customer_id: int, schema: CustomerAddressCreate
+    ) -> CustomerAddress:
+        address = CustomerAddress(customer_id=customer_id, **schema.model_dump())
+        self.db.add(address)
         await self.db.flush()
-        return db_address
+        return address
 
-    async def update(self, tenant_id: uuid.UUID, db_address: CustomerAddress, schema: CustomerAddressUpdate) -> CustomerAddress:
-        """Update an existing address."""
+    async def update(
+        self, tenant_id: uuid.UUID, address: CustomerAddress, schema: CustomerAddressUpdate
+    ) -> CustomerAddress:
         for field, value in schema.model_dump(exclude_unset=True).items():
-            setattr(db_address, field, value)
-        self.db.add(db_address)
+            setattr(address, field, value)
+        self.db.add(address)
         await self.db.flush()
-        return db_address
+        return address
 
-    async def delete(self, tenant_id: uuid.UUID, db_address: CustomerAddress) -> None:
-        """Remove an address."""
-        await self.db.delete(db_address)
+    async def delete(self, tenant_id: uuid.UUID, address: CustomerAddress) -> None:
+        await self.db.delete(address)
         await self.db.flush()

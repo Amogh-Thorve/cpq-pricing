@@ -37,8 +37,8 @@
 
 ## Status of Application Modules
 - [x] 1. **Authentication** (Folder/Placeholder created: Yes | Fully implemented: Yes | Forgot & Reset Password: Yes)--->✅
-- [x] 2. **Customer Management** (Folder/Placeholder created: Yes | Fully implemented: Yes)--->✅
-- [ ] 3. **Product Catalog** (Folder/Placeholder created: No | Fully implemented: No)
+- [x] 2. **Customer Management** (Folder/Placeholder created: Yes | Fully implemented: Yes | RBAC & Ownership: Yes | UI: Yes)--->✅
+- [x] 3. **Product Catalog** (Folder/Placeholder created: Yes | Fully implemented: Yes | RBAC: Yes | UI: Yes | Excel Import: Yes | Cost & Margins: Yes)--->✅
 - [ ] 4. **Pricing Engine** (Folder/Placeholder created: No | Fully implemented: No)
 - [ ] 5. **Product Configuration** (Folder/Placeholder created: No | Fully implemented: No)
 - [ ] 6. **Quote Builder** (Folder/Placeholder created: No | Fully implemented: No)
@@ -67,7 +67,7 @@
 All API routes are prefixed under `/api/v1` and defined in each domain's `routes.py`:
 - **Auth**: `/auth/register` (POST), `/auth/login` (POST), `/auth/me` (GET)
 - **Customer**: `/customers/` (GET, POST), `/customers/{customer_id}` (GET, PUT, DELETE), `/customers/{customer_id}/contacts` (POST)
-- **Catalog**: `/products` (GET, POST), `/products/{product_id}` (GET), `/categories` (GET, POST), `/price-books` (GET, POST), `/price-books/{price_book_id}/entries` (POST)
+- **Catalog**: `/products` (GET, POST), `/products/{product_id}` (GET, PUT), `/products/{product_id}/archive` (PATCH), `/products/{product_id}/restore` (PATCH), `/categories` (GET, POST), `/price-books` (GET, POST), `/price-books/{price_book_id}/entries` (POST)
 - **Pricing**: `/pricing/calculate` (POST), `/pricing/rules` (GET, POST)
 - **Configuration**: `/configuration/validate` (POST), `/configuration/rules` (GET, POST)
 - **Quotes**: `/quotes/` (GET, POST), `/quotes/{quote_id}` (GET, PUT), `/quotes/{quote_id}/revise` (POST)

@@ -10,6 +10,13 @@ from backend.app.domains.customer.tests.test_customer_foundation import (
     test_address_schemas,
     run_async_integration_tests
 )
+from backend.app.domains.customer.tests.test_customer_rbac import run_rbac_tests
+
+
+
+async def run_all_async_tests():
+    await run_async_integration_tests()
+    await run_rbac_tests()
 
 if __name__ == "__main__":
     print("Running Customer Management module tests...")
@@ -25,7 +32,7 @@ if __name__ == "__main__":
         print("OK: test_address_schemas passed")
 
         # Async integration tests
-        asyncio.run(run_async_integration_tests())
+        asyncio.run(run_all_async_tests())
 
         print("\nALL CUSTOMER MANAGEMENT TESTS PASSED SUCCESSFULLY!")
         sys.exit(0)

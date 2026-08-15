@@ -29,7 +29,10 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     base_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    cost_price: Mapped[Optional[float]] = mapped_column(Numeric(12, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    billing_type: Mapped[str] = mapped_column(String(20), default="MRC", nullable=False)
     category_id: Mapped[Optional[int]] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     
     # Salesforce Product2 ID mapping

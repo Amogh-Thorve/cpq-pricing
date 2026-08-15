@@ -15,7 +15,7 @@ Tests:
 import asyncio
 import uuid
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from backend.app.core.database import SessionLocal
 from backend.app.domains.customer.models import (
     Customer, Contact, CustomerAddress,
@@ -253,7 +253,7 @@ async def run_async_integration_tests():
         restored = await svc.restore_customer(tenant_1, c_ar.id, user1.id)
         await db.commit()
         await db.refresh(restored)
-        assert restored.status == CustomerStatus.INACTIVE
+        assert restored.status == CustomerStatus.ACTIVE
 
         # Restore non-archived → error
         try:
@@ -487,5 +487,12 @@ async def run_async_integration_tests():
         for item in t2_search.items:
             assert item.tenant_id == tenant_2
         print("   OK: search results are fully tenant-scoped")
+
+        # Cleanup created users, customers, and addresses to prevent database pollution!
+        print("Cleaning up foundation integration test database records...")
+        await db.execute(delete(Customer).where(Customer.tenant_id.in_([tenant_1, tenant_2])))
+        await db.execute(delete(User).where(User.id.in_([user1.id, user2.id])))
+        await db.commit()
+        print("Cleanup complete!")
 
         print("\n=== ALL CUSTOMER INTEGRATION TESTS PASSED ===")

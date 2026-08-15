@@ -47,13 +47,8 @@ async def seed_roles_and_permissions(db: AsyncSession) -> None:
         # Resolve permission entities to associate with role
         target_permissions = [existing_perms[p_name] for p_name in perm_names]
         
-        # Link permissions (SQLAlchemy handles relationship population via secondary table)
-        # Avoid duplicate associations if they already exist
-        current_perm_ids = {p.id for p in role_obj.permissions}
-        for perm_obj in target_permissions:
-            if perm_obj.id not in current_perm_ids:
-                role_obj.permissions.append(perm_obj)
-                
+        # Link permissions
+        role_obj.permissions = target_permissions
         db.add(role_obj)
 
     await db.flush()

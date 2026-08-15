@@ -27,22 +27,30 @@ A production-quality, modular monolith Configure, Price, Quote platform with Goo
 
 ## Local Development Setup
 
+> A fresh developer can reproduce the complete environment in ~5 minutes without receiving any database dump.
+
 ### 1. Clone and configure environment
 
 ```bash
-cd backend
-cp .env.example .env
-# Edit .env and fill in your GEMINI_API_KEY (optional for now)
+git clone https://github.com/your-org/cpq-pricing.git
+cd cpq-pricing
+
+# Copy the environment template and fill in your values
+cp .env.example backend/.env
+nano backend/.env     # set DATABASE_URL and JWT_SECRET at minimum
 ```
 
 ### 2. Start PostgreSQL
 
 ```bash
-# Using Docker (recommended)
+# Option A — Docker (recommended)
 docker compose up -d db
-
-# Wait ~5 seconds for the database to be ready, then verify:
+# Wait ~5 seconds, then verify:
 docker compose ps
+
+# Option B — Local PostgreSQL 16
+# Create the database manually:
+#   createdb cpq_db
 ```
 
 ### 3. Install Python dependencies
@@ -56,21 +64,47 @@ pip install -r backend/requirements.txt
 ```bash
 cd backend
 python -m alembic upgrade head
+cd ..
 ```
 
-### 5. Start the backend API
+This creates all tables from scratch. No manual SQL required.
+
+### 5. Seed the development environment
 
 ```bash
-# From the project root
+python scripts/seed_dev.py
+```
+
+This idempotently creates:
+- All permissions and roles (Administrator, Sales Manager, Sales Rep, Executive, Viewer)
+- Four development user accounts (one per role)
+- Product categories and 14 DEV-* catalog products
+- 3 development customers
+
+Running it multiple times is safe — it will never duplicate records.
+
+#### Development Login Credentials
+
+| Role | Email | Password |
+|---|---|---|
+| Administrator | admin@cpq.local | DevAdmin@2025! |
+| Sales Manager | manager@cpq.local | DevManager@2025! |
+| Sales Representative | rep@cpq.local | DevRep@2025! |
+| Executive | executive@cpq.local | DevExec@2025! |
+
+> **Security**: These credentials are for local development only. Never reuse them in staging or production.
+
+### 6. Start the backend API
+
+```bash
 python backend/run.py
 ```
 
-The API will be available at:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 - **Health check**: http://localhost:8000/health
 
-### 6. Install and start the frontend
+### 7. Install and start the frontend
 
 ```bash
 cd frontend
@@ -78,9 +112,10 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at: http://localhost:3000
+Frontend: http://localhost:3000
 
 ---
+
 
 ## Project Structure
 

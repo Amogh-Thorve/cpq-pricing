@@ -98,6 +98,7 @@ class CustomerBase(BaseModel):
     tax_identifier: Optional[str] = None
     currency: str = "USD"
     notes: Optional[str] = None
+    owner_id: Optional[uuid.UUID] = None
 
     @field_validator("customer_number", "legal_name")
     @classmethod
@@ -122,6 +123,7 @@ class CustomerUpdate(BaseModel):
     tax_identifier: Optional[str] = None
     currency: Optional[str] = None
     notes: Optional[str] = None
+    owner_id: Optional[uuid.UUID] = None
 
 class CustomerRead(CustomerBase):
     id: int
@@ -130,6 +132,8 @@ class CustomerRead(CustomerBase):
     updated_at: datetime
     created_by: Optional[uuid.UUID] = None
     updated_by: Optional[uuid.UUID] = None
+    deleted_at: Optional[datetime] = None
+    deleted_by: Optional[uuid.UUID] = None
     contacts: List[ContactRead] = []
     addresses: List[CustomerAddressRead] = []
 
@@ -158,3 +162,8 @@ class CustomerSearchParams(BaseModel):
     industry: Optional[str] = None
     page: int = 1
     page_size: int = 20
+
+
+class CustomerAssignRequest(BaseModel):
+    owner_id: uuid.UUID
+

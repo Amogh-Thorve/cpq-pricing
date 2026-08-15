@@ -67,7 +67,7 @@ class UserRepository:
                 "sales_rep": "Sales Representative",
                 "manager": "Sales Manager",
                 "admin": "Administrator",
-                "executive": "Viewer"
+                "executive": "Executive"
             }
             assigned_role_name = role_map.get(schema.role, "Viewer")
 

@@ -15,9 +15,12 @@ import {
   ShieldCheck,
   Sparkles,
   Database,
-  ArrowRightLeft
+  ArrowRightLeft,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarLinkProps {
   href: string;
@@ -49,6 +52,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
@@ -60,6 +64,23 @@ export default function DashboardLayout({
     { href: "/approvals", label: "Approvals", icon: <CheckSquare size={18} /> },
     { href: "/integrations", label: "Integrations", icon: <ArrowRightLeft size={18} /> },
   ];
+
+  const roleLabels: Record<string, string> = {
+    sales_rep: "Sales Representative",
+    manager: "Sales Manager",
+    executive: "Executive",
+    admin: "Administrator",
+  };
+
+  const roleLabel = user?.role ? roleLabels[user.role] || user.role : "Guest";
+  const initials = user?.full_name
+    ? user.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "US";
 
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
@@ -111,10 +132,20 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-xs font-semibold text-zinc-500">Sales Representative</span>
-            <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-zinc-950 font-bold text-sm">
-              SR
+            <div className="flex flex-col text-right">
+              <span className="text-sm font-bold text-zinc-200">{user?.full_name}</span>
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{roleLabel}</span>
             </div>
+            <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-zinc-950 font-bold text-sm">
+              {initials}
+            </div>
+            <button
+              onClick={logout}
+              className="p-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors duration-200"
+              title="Log Out"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 

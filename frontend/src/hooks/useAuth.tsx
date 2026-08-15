@@ -25,6 +25,23 @@ import type { LoginRequest, RegisterRequest, Token, UserRead } from "@/types/aut
 
 // ─── API calls ────────────────────────────────────────────────────────────────
 
+function mapBackendUser(rawUser: any): UserRead {
+  if (!rawUser) return rawUser;
+  const roles = rawUser.roles || [];
+  const rawRole = roles.length > 0 ? roles[0].name.toLowerCase() : "guest";
+  let resolvedRole: any = "guest";
+  if (rawRole.includes("admin")) resolvedRole = "admin";
+  else if (rawRole.includes("manager")) resolvedRole = "manager";
+  else if (rawRole.includes("representative") || rawRole.includes("rep")) resolvedRole = "sales_rep";
+  else if (rawRole.includes("executive")) resolvedRole = "executive";
+
+  return {
+    ...rawUser,
+    full_name: rawUser.full_name || (rawUser.first_name && rawUser.last_name ? `${rawUser.first_name} ${rawUser.last_name}` : "") || rawUser.username || rawUser.email || "User",
+    role: resolvedRole
+  };
+}
+
 async function loginAPI(credentials: LoginRequest): Promise<Token> {
   return api.post<Token>("/auth/login", credentials);
 }
@@ -34,7 +51,8 @@ async function registerAPI(data: RegisterRequest): Promise<UserRead> {
 }
 
 async function getMeAPI(): Promise<UserRead> {
-  return api.get<UserRead>("/auth/me");
+  const res = await api.get<any>("/auth/me");
+  return mapBackendUser(res);
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -89,8 +107,8 @@ export function useLogin() {
     mutationFn: loginAPI,
     onSuccess: (data) => {
       tokenStorage.set(data.access_token);
-      // Pre-populate the user cache so /auth/me is instant
-      queryClient.setQueryData(["auth", "me"], data.user);
+      const mappedUser = mapBackendUser(data.user);
+      queryClient.setQueryData(["auth", "me"], mappedUser);
       router.push("/dashboard");
     },
   });
